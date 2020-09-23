@@ -1,0 +1,9 @@
+name: Sublime Text Schema Reviewer
+description: GitHub Action for reviewing package package control schema
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run repository tests
+      shell: bash
+      run: python3 ${{ github.action_path }}/tests/test.py
