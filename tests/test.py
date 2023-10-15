@@ -411,36 +411,62 @@ class TestContainer(object):
         'url': str
     }
 
-    def _test_release(self, package_name, data, dependency):
+    def _test_release(self, package_name, data, dependency, main_repo=True):
         # Test for required keys (and fail early)
-        if dependency:
-            if 'url' in data:
-                if data['url'].startswith('http://'):
-                    self.assertTrue('sha256' in data,
-                                    'A release must provide "sha256" key if served over HTTP')
+        if main_repo:
+            if dependency:
+                condition = (
+                    'base' in data
+                    and ('tags' in data or 'branch' in data)
+                    or ('sha256' in data
+                        and ('url' not in data
+                             or data['url'].startswith('http://')))
+                )
+                self.assertTrue(condition,
+                                'A release must have a "base" and a "tags" or "branch" key '
+                                'if it is in the main repository. For custom '
+                                'releases, a custom repository.json file must be '
+                                'hosted elsewhere. The only exception to this rule '
+                                'is for packages that can not be served over HTTPS '
+                                'since they help bootstrap proper secure HTTP '
+                                'support for Sublime Text.')
+            else:
+                self.assertTrue(('tags' in data or 'branch' in data),
+                                'A release must have a "tags" key or "branch" key '
+                                'if it is in the main repository. For custom '
+                                'releases, a custom repository.json file must be '
+                                'hosted elsewhere.')
+                for key in ('url', 'version', 'date'):
+                    self.assertNotIn(key, data,
+                                     'The version, date and url keys should not be '
+                                     'used in the main repository since a pull '
+                                     'request would be necessary for every release')
+
+        elif 'tags' not in data and 'branch' not in data:
+            if dependency:
                 for key in ('url', 'version'):
                     self.assertIn(key, data,
                                   'A release must provide "url" and "version" '
                                   'keys if it does not specify "tags" or "branch"')
             else:
-                self.assertTrue('base' in data and ('tags' in data or 'branch' in data),
-                                'A release must have a "base" and a "tags" or "branch" key.')
-
-        if 'tags' in data or 'branch' in data:
-            for key in ('url', 'version', 'date'):
-                self.assertNotIn(key, data,
-                                 'The key "%s" is redundant when "tags" or '
-                                 '"branch" is specified' % key)
-        else:
-            if not dependency:
                 for key in ('url', 'version', 'date'):
                     self.assertIn(key, data,
                                   'A release must provide "url", "version" and '
                                   '"date" keys if it does not specify "tags" or'
                                   '"branch"')
 
+        else:
+            for key in ('url', 'version', 'date'):
+                self.assertNotIn(key, data,
+                                 'The key "%s" is redundant when "tags" or '
+                                 '"branch" is specified' % key)
+
         self.assertIn('sublime_text', data,
                       'A sublime text version selector is required')
+
+        if dependency:
+            self.assertIn('platforms', data,
+                          'A platforms selector is required for dependencies')
 
         self.assertFalse(('tags' in data and 'branch' in data),
                          'A release must have only one of the "tags" or '
@@ -483,7 +509,7 @@ class TestContainer(object):
                     v = [v]
                 for plat in v:
                     self.assertRegex(plat,
-                                     r"^(\*|(osx|linux|windows)(-x(32|64))?)$")
+                                     r"^(\*|(osx|linux|windows)(-(x(32|64))|arm64)?)$")
 
                 self.assertCountEqual(v, list(set(v)),
                                       "Specifying the same platform multiple times is redundant")
@@ -646,7 +672,7 @@ class TestContainer(object):
                     for release in package['releases']:
                         (yield cls._test_release,
                             ("%s (%s)" % (package_name, path),
-                             release, False))
+                             release, False, False))
         if 'includes' in data:
             for include in data['includes']:
                 i_url = urljoin(path, include)
@@ -766,44 +792,36 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
 
     def test_repository_keys(self):
         keys = sorted(self.j.keys())
-        self.assertEqual(keys, ['dependencies', 'packages', 'schema_version'])
+        self.assertEqual(keys, ['dependencies', 'includes', 'packages',
+                                'schema_version'])
 
         self.assertEqual(self.j['schema_version'], '3.0.0')
+        self.assertEqual(self.j['packages'], [])
+        self.assertEqual(self.j['dependencies'], [])
+        self.assertIsInstance(self.j['includes'], list)
 
-        if 'includes' in self.j:
-            self.assertIsInstance(self.j['includes'], list)
-            for include in self.j['includes']:
-                self.assertIsInstance(include, str)
+        for include in self.j['includes']:
+            self.assertIsInstance(include, str)
 
     def test_indentation(self):
         return self._test_indentation('repository.json', self.source)
 
     @classmethod
     def generate_include_tests(cls, stream):
-        package_lists = []
-        if 'packages' in cls.j:
-            package_lists.append(('repository.json', cls.j))
+        for include in cls.j['includes']:
+            try:
+                with _open(include) as f:
+                    contents = f.read().decode('utf-8', 'strict')
+                data = json.loads(contents)
+            except Exception as e:
+                yield cls._fail("strict while reading %r" % include, e)
+                continue
 
-        if 'includes' in cls.j:
-            for include in cls.j['includes']:
-                try:
-                    with _open(include) as f:
-                        contents = f.read().decode('utf-8', 'strict')
-                    data = json.loads(contents)
-                except Exception as e:
-                    yield cls._fail("strict while reading %r" % include, e)
-                    continue
+            # `include` is for output during tests only
+            yield cls._test_indentation, (include, contents)
+            yield cls._test_repository_keys, (include, data)
+            yield cls._test_repository_package_names, (include, data)
 
-                # `include` is for output during tests only
-                yield cls._test_indentation, (include, contents)
-                yield cls._test_repository_keys, (include, data)
-                yield cls._test_repository_package_names, (include, data)
-                package_lists.append((include, data))
-                if 'dependencies' in data:
-                    yield cls._test_dependency_names, (include, data)
-
-        for package_list in package_lists:
-            include, data = package_list
             for package in data['packages']:
                 yield cls._test_package, (include, package)
 
@@ -817,6 +835,8 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
                              False))
 
             if 'dependencies' in data:
+                yield cls._test_dependency_names, (include, data)
+
                 for dependency in data['dependencies']:
                     yield cls._test_dependency, (include, dependency)
 
