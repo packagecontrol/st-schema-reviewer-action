@@ -7,11 +7,18 @@ root directory. For some reason `nosetests` does not pick up the generated tests
 even though they are generated at load time.
 
 Arguments:
+    --channel=channel.json
+        Channel filename to test
+
+    --repository=repository.json
+        Repository filename to test
+
     --test-repositories
         Also generates tests for all repositories in `channel.json` (the http
         ones).
 """
 
+import argparse
 import os
 import re
 import json
@@ -25,18 +32,12 @@ from urllib.parse import urljoin
 
 generator_method_type = 'method'
 
-
-if hasattr(sys, 'argv'):
-    arglist = ['--test-repositories']
-    # Extract used arguments from commandline an strip them for
-    # unittest.main
-    userargs = [arg for arg in sys.argv if arg in arglist]
-    for arg in userargs:
-        if arg in sys.argv:
-            sys.argv.remove(arg)
-else:
-    userargs = []
-
+parser = argparse.ArgumentParser()
+parser.add_argument('--channel', default='channel.json')
+parser.add_argument('--repository', default='repository.json')
+parser.add_argument('--test-repositories', action='store_true')
+userargs, unittesting_args = parser.parse_known_args()
+sys.argv = sys.argv[:1] + unittesting_args
 
 ################################################################################
 # Utilities
@@ -704,7 +705,10 @@ class TestContainer(object):
         stream.flush()
 
 
-@unittest.skipIf(not os.path.isfile('channel.json'), "No channel.json found")
+@unittest.skipIf(
+    not userargs.channel or not os.path.isfile(userargs.channel),
+    "No {} found".format(userargs.channel)
+)
 class DefaultChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
@@ -716,8 +720,8 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
     # We need cls.j this for generating tests
     @classmethod
     def pre_generate(cls):
-        if not hasattr(cls, 'j') and os.path.isfile('channel.json'):
-            with _open('channel.json') as f:
+        if not hasattr(cls, 'j') and os.path.isfile(userargs.channel):
+            with _open(userargs.channel) as f:
                 cls.source = f.read().decode('utf-8', 'strict')
                 cls.j = json.loads(cls.source)
 
@@ -749,7 +753,7 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
             self.assertIsInstance(repo, str)
 
     def test_indentation(self):
-        return self._test_indentation('channel.json', self.source)
+        return self._test_indentation(userargs.channel, self.source)
 
     def test_channel_repositories(self):
         repos = self.j['repositories']
@@ -762,7 +766,7 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
 
     @classmethod
     def generate_repository_tests(cls, stream):
-        if "--test-repositories" not in userargs:
+        if not userargs.test_repositories:
             # Only generate tests for all repositories (those hosted online)
             # when run with "--test-repositories" parameter.
             return
@@ -782,6 +786,10 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
         stream.flush()
 
 
+@unittest.skipIf(
+    not userargs.repository or not os.path.isfile(userargs.repository),
+    "No {} found".format(userargs.repository)
+)
 class DefaultRepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 

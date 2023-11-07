@@ -1,9 +1,31 @@
 name: Sublime Text Schema Reviewer
 description: GitHub Action for reviewing package package control schema
 
+inputs:
+  channel:
+    description: Channel file to check
+    required: false
+    default: channel.json
+  test_repositories:
+    description: Check channel's external https repositories
+    required: false
+    default: false
+  repository:
+    description: Repository file to check
+    required: false
+    default: repository.json
+
 runs:
-  using: 'composite'
+  using: composite
   steps:
-    - name: Run repository tests
+    - name: Run channel/repository scheme tests
       shell: bash
-      run: python3 ${{ github.action_path }}/tests/test.py
+      run: |-
+        flags=
+        if [[ ${{ inputs.test_repositories }} == true ]]; then
+          flags="$flags --test-repositories";
+        fi;
+        python3 "${{ github.action_path }}/action.py" \
+          --channel=${{ inputs.channel }} \
+          --repository=${{ inputs.repository }} \
+          $flags
