@@ -801,7 +801,7 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
     @classmethod
     def pre_generate(cls):
         if not hasattr(cls, 'j'):
-            with _open('repository.json') as f:
+            with _open(userargs.repository) as f:
                 cls.source = f.read().decode('utf-8', 'strict')
                 cls.j = json.loads(cls.source)
 
@@ -819,7 +819,7 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
             self.assertIsInstance(include, str)
 
     def test_indentation(self):
-        return self._test_indentation('repository.json', self.source)
+        return self._test_indentation(userargs.repository, self.source)
 
     @classmethod
     def generate_include_tests(cls, stream):
