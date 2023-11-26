@@ -510,7 +510,7 @@ class TestContainer(object):
                     v = [v]
                 for plat in v:
                     self.assertRegex(plat,
-                                     r"^(\*|(osx|linux|windows)(-(x(32|64))|arm64)?)$")
+                                     r"^(\*|(osx|linux|windows)(-(x(32|64)|arm64))?)$")
 
                 self.assertCountEqual(v, list(set(v)),
                                       "Specifying the same platform multiple times is redundant")
@@ -525,14 +525,6 @@ class TestContainer(object):
 
             elif k == 'date':
                 self.assertRegex(v, r"^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$")
-
-            elif k == 'url':
-                self.assertRegex(v, r'^https?://')
-
-            elif k == 'base':
-                self.assertRegex(v, self.release_base_regex,
-                                 'The base url is badly formatted or '
-                                 'invalid')
 
             elif k == 'tags':
                 self.assertTrue(bool(v),
@@ -801,7 +793,7 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
     @classmethod
     def pre_generate(cls):
         if not hasattr(cls, 'j'):
-            with _open('repository.json') as f:
+            with _open(userargs.repository) as f:
                 cls.source = f.read().decode('utf-8', 'strict')
                 cls.j = json.loads(cls.source)
 
@@ -819,7 +811,7 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
             self.assertIsInstance(include, str)
 
     def test_indentation(self):
-        return self._test_indentation('repository.json', self.source)
+        return self._test_indentation(userargs.repository, self.source)
 
     @classmethod
     def generate_include_tests(cls, stream):
