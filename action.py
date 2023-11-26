@@ -7,11 +7,18 @@ root directory. For some reason `nosetests` does not pick up the generated tests
 even though they are generated at load time.
 
 Arguments:
+    --channel=channel.json
+        Channel filename to test
+
+    --repository=repository.json
+        Repository filename to test
+
     --test-repositories
         Also generates tests for all repositories in `channel.json` (the http
         ones).
 """
 
+import argparse
 import os
 import re
 import json
@@ -25,18 +32,12 @@ from urllib.parse import urljoin
 
 generator_method_type = 'method'
 
-
-if hasattr(sys, 'argv'):
-    arglist = ['--test-repositories']
-    # Exctract used arguments form the commandline an strip them for
-    # unittest.main
-    userargs = [arg for arg in sys.argv if arg in arglist]
-    for arg in userargs:
-        if arg in sys.argv:
-            sys.argv.remove(arg)
-else:
-    userargs = []
-
+parser = argparse.ArgumentParser()
+parser.add_argument('--channel', default='channel.json')
+parser.add_argument('--repository', default='repository.json')
+parser.add_argument('--test-repositories', action='store_true')
+userargs, unittesting_args = parser.parse_known_args()
+sys.argv = sys.argv[:1] + unittesting_args
 
 ################################################################################
 # Utilities
@@ -161,38 +162,38 @@ class TestContainer(object):
     # except for Pascal and Rust
     # which only ship in ST3
     default_packages = (
-        'ActionScript', 'AppleScript', 'ASP', 'Batch File',
-        'C#', 'C++', 'Clojure', 'Color Scheme - Default', 'CSS', 'D', 'Default',
-        'Diff', 'Erlang', 'Go', 'Graphviz', 'Groovy', 'Haskell', 'HTML', 'Java',
-        'JavaScript', 'Language - English', 'LaTeX', 'Lisp', 'Lua', 'Makefile',
-        'Markdown', 'Matlab', 'Objective-C', 'OCaml', 'Pascal', 'Perl', 'PHP',
-        'Python', 'R', 'Rails', 'Regular Expressions', 'RestructuredText',
-        'Ruby', 'Rust', 'Scala', 'ShellScript', 'SQL', 'TCL', 'Text', 'Textile',
+        'ActionScript', 'AppleScript', 'ASP', 'Batch File', 'Binary', 'C#',
+        'C++', 'Clojure', 'Color Scheme - Default', 'CSS', 'D', 'Default',
+        'Diff', 'Erlang', 'Git Formats', 'Go', 'Graphviz', 'Groovy',
+        'Haskell', 'HTML', 'Java', 'JavaScript', 'Language - English',
+        'LaTeX', 'Lisp', 'Lua', 'Makefile', 'Markdown', 'Matlab',
+        'Objective-C', 'OCaml', 'Pascal', 'Perl', 'PHP', 'Python', 'R',
+        'Rails', 'Regular Expressions', 'RestructuredText', 'Ruby', 'Rust',
+        'Scala', 'ShellScript', 'SQL', 'TCL', 'Text', 'Textile',
         'Theme - Default', 'Vintage', 'XML', 'YAML'
     )
 
-    rel_b_reg = r'''^ (https:// github\.com/ [^/]+/ [^/]+
-                      |https:// bitbucket\.org/ [^/]+/ [^/]+
-                      |https:// gitlab\.com/ [^/]+/ [^/]+
+    rel_b_reg = r'''^ ( https:// bitbucket\.org / [^/#?]+ / [^/#?]+
+                      | https:// github\.com / [^/#?]+ / [^/#?]+
+                      | https:// gitlab\.com / [^/#?]+ / [^/#?]+
                       ) $'''
     # Strip multilines for better debug info on failures
     rel_b_reg = ' '.join(map(str.strip, rel_b_reg.split()))
     release_base_regex = re.compile(rel_b_reg, re.X)
 
-    pac_d_reg = r'''^ (https:// github\.com/ [^/]+/ [^/]+ (/tree/ .+ (?<!/)
-                                                          |/)? (?<!\.git)
-                      |https:// bitbucket\.org/ [^/]+/ [^/]+ (/src/ .+ (?<!/)
-                                                             |\#tags
-                                                             |/)?
-                      |https:// gitlab\.com/ [^/]+/ [^/]+ (/-/tree/ .+ (?<!/)
-                                                          |/)? (?<!\.git)
+    pac_d_reg = r'''^ ( https:// bitbucket\.org/ [^/#?]+/ [^/#?]+
+                        ( /src/ [^#?]*[^/#?] | \#tags | / )?
+                      | https:// github\.com/ [^/#?]+/ [^/#?]+
+                        (?<!\.git) ( /tree/ [^#?]*[^/#?] | / )?
+                      | https:// gitlab\.com/ [^/#?]+/ [^/#?]+
+                        (?<!\.git) ( /-/tree/ [^#?]*[^/#?] | / )?
                       ) $'''
     pac_d_reg = ' '.join(map(str.strip, pac_d_reg.split()))
     package_details_regex = re.compile(pac_d_reg, re.X)
 
     def _test_repository_keys(self, include, data):
-        keys = ('schema_version', 'packages', 'dependencies', 'includes')
-        self.assertTrue(2 <= len(data) <= 4, "Unexpected number of keys")
+        keys = ("$schema", 'schema_version', 'packages', 'dependencies', 'includes')
+        self.assertTrue(2 <= len(data) <= len(keys), "Unexpected number of keys")
         self.assertIn('schema_version', data)
         self.assertEqual(data['schema_version'], '3.0.0')
 
@@ -411,36 +412,62 @@ class TestContainer(object):
         'url': str
     }
 
-    def _test_release(self, package_name, data, dependency):
+    def _test_release(self, package_name, data, dependency, main_repo=True):
         # Test for required keys (and fail early)
-        if dependency:
-            if 'url' in data:
-                if data['url'].startswith('http://'):
-                    self.assertTrue('sha256' in data,
-                                    'A release must provide "sha256" key if served over HTTP')
+        if main_repo:
+            if dependency:
+                condition = (
+                    'base' in data
+                    and ('tags' in data or 'branch' in data)
+                    or ('sha256' in data
+                        and ('url' not in data
+                             or data['url'].startswith('http://')))
+                )
+                self.assertTrue(condition,
+                                'A release must have a "base" and a "tags" or "branch" key '
+                                'if it is in the main repository. For custom '
+                                'releases, a custom repository.json file must be '
+                                'hosted elsewhere. The only exception to this rule '
+                                'is for packages that can not be served over HTTPS '
+                                'since they help bootstrap proper secure HTTP '
+                                'support for Sublime Text.')
+            else:
+                self.assertTrue(('tags' in data or 'branch' in data),
+                                'A release must have a "tags" key or "branch" key '
+                                'if it is in the main repository. For custom '
+                                'releases, a custom repository.json file must be '
+                                'hosted elsewhere.')
+                for key in ('url', 'version', 'date'):
+                    self.assertNotIn(key, data,
+                                     'The version, date and url keys should not be '
+                                     'used in the main repository since a pull '
+                                     'request would be necessary for every release')
+
+        elif 'tags' not in data and 'branch' not in data:
+            if dependency:
                 for key in ('url', 'version'):
                     self.assertIn(key, data,
                                   'A release must provide "url" and "version" '
                                   'keys if it does not specify "tags" or "branch"')
             else:
-                self.assertTrue('base' in data and ('tags' in data or 'branch' in data),
-                                'A release must have a "base" and a "tags" or "branch" key.')
-
-        if 'tags' in data or 'branch' in data:
-            for key in ('url', 'version', 'date'):
-                self.assertNotIn(key, data,
-                                 'The key "%s" is redundant when "tags" or '
-                                 '"branch" is specified' % key)
-        else:
-            if not dependency:
                 for key in ('url', 'version', 'date'):
                     self.assertIn(key, data,
                                   'A release must provide "url", "version" and '
                                   '"date" keys if it does not specify "tags" or'
                                   '"branch"')
 
+        else:
+            for key in ('url', 'version', 'date'):
+                self.assertNotIn(key, data,
+                                 'The key "%s" is redundant when "tags" or '
+                                 '"branch" is specified' % key)
+
         self.assertIn('sublime_text', data,
                       'A sublime text version selector is required')
+
+        if dependency:
+            self.assertIn('platforms', data,
+                          'A platforms selector is required for dependencies')
 
         self.assertFalse(('tags' in data and 'branch' in data),
                          'A release must have only one of the "tags" or '
@@ -483,15 +510,15 @@ class TestContainer(object):
                     v = [v]
                 for plat in v:
                     self.assertRegex(plat,
-                                     r"^(\*|(osx|linux|windows)(-x(32|64))?)$")
+                                     r"^(\*|(osx|linux|windows)(-(x(32|64))|arm64)?)$")
 
                 self.assertCountEqual(v, list(set(v)),
                                       "Specifying the same platform multiple times is redundant")
 
-                if (("osx-x32" in v and "osx-x64" in v) or
-                    ("windows-x32" in v and "windows-x64" in v) or
-                    ("linux-x32" in v and "linux-x64" in v)):
-                    self.fail("Specifying both x32 and x64 architectures is redundant")
+                if (("osx-x32" in v and "osx-x64" in v and "osx-arm64" in v) or
+                    ("windows-x32" in v and "windows-x64" in v and "windows-arm64" in v) or
+                    ("linux-x32" in v and "linux-x64" in v and "linux-arm64" in v)):
+                    self.fail("Specifying all of x32, x64 and arm64 architectures is redundant")
 
                 self.assertFalse(set(["osx", "windows", "linux"]) == set(v),
                                  '"osx, windows, linux" are similar to (and should be replaced by) "*"')
@@ -581,9 +608,8 @@ class TestContainer(object):
             if re.match(r'https?://', path, re.I) is not None:
                 # Download the repository
                 try:
-                    f = urlopen(path)
-                    source = f.read()
-                    f.close()
+                    with urlopen(path) as f:
+                        source = f.read()
                 except Exception as e:
                     yield cls._fail("Downloading %s failed" % path, e)
                     return
@@ -646,7 +672,7 @@ class TestContainer(object):
                     for release in package['releases']:
                         (yield cls._test_release,
                             ("%s (%s)" % (package_name, path),
-                             release, False))
+                             release, False, False))
         if 'includes' in data:
             for include in data['includes']:
                 i_url = urljoin(path, include)
@@ -678,7 +704,10 @@ class TestContainer(object):
         stream.flush()
 
 
-@unittest.skipIf(not os.path.isfile('channel.json'), "No channel.json found")
+@unittest.skipIf(
+    not userargs.channel or not os.path.isfile(userargs.channel),
+    "No {} found".format(userargs.channel)
+)
 class DefaultChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
@@ -690,8 +719,8 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
     # We need cls.j this for generating tests
     @classmethod
     def pre_generate(cls):
-        if not hasattr(cls, 'j') and os.path.isfile('channel.json'):
-            with _open('channel.json') as f:
+        if not hasattr(cls, 'j') and os.path.isfile(userargs.channel):
+            with _open(userargs.channel) as f:
                 cls.source = f.read().decode('utf-8', 'strict')
                 cls.j = json.loads(cls.source)
 
@@ -705,17 +734,25 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
             print("Repositories skipped: %s" % dict(cls.skipped_repositories))
 
     def test_channel_keys(self):
+        allowed_keys = ("$schema", 'repositories', 'schema_version')
         keys = sorted(self.j.keys())
-        self.assertEqual(keys, ['repositories', 'schema_version'])
 
+        self.assertTrue(2 <= len(keys) <= len(allowed_keys), "Unexpected number of keys")
+
+        for k in keys:
+            self.assertIn(k, allowed_keys, "Unexpected key")
+
+        self.assertIn('schema_version', keys)
         self.assertEqual(self.j['schema_version'], '3.0.0')
+
+        self.assertIn('repositories', keys)
         self.assertIsInstance(self.j['repositories'], list)
 
         for repo in self.j['repositories']:
             self.assertIsInstance(repo, str)
 
     def test_indentation(self):
-        return self._test_indentation('channel.json', self.source)
+        return self._test_indentation(userargs.channel, self.source)
 
     def test_channel_repositories(self):
         repos = self.j['repositories']
@@ -728,7 +765,7 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
 
     @classmethod
     def generate_repository_tests(cls, stream):
-        if "--test-repositories" not in userargs:
+        if not userargs.test_repositories:
             # Only generate tests for all repositories (those hosted online)
             # when run with "--test-repositories" parameter.
             return
@@ -748,6 +785,10 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
         stream.flush()
 
 
+@unittest.skipIf(
+    not userargs.repository or not os.path.isfile(userargs.repository),
+    "No {} found".format(userargs.repository)
+)
 class DefaultRepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
@@ -766,44 +807,36 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
 
     def test_repository_keys(self):
         keys = sorted(self.j.keys())
-        self.assertEqual(keys, ['dependencies', 'packages', 'schema_version'])
+        self.assertEqual(keys, ['dependencies', 'includes', 'packages',
+                                'schema_version'])
 
         self.assertEqual(self.j['schema_version'], '3.0.0')
+        self.assertEqual(self.j['packages'], [])
+        self.assertEqual(self.j['dependencies'], [])
+        self.assertIsInstance(self.j['includes'], list)
 
-        if 'includes' in self.j:
-            self.assertIsInstance(self.j['includes'], list)
-            for include in self.j['includes']:
-                self.assertIsInstance(include, str)
+        for include in self.j['includes']:
+            self.assertIsInstance(include, str)
 
     def test_indentation(self):
         return self._test_indentation('repository.json', self.source)
 
     @classmethod
     def generate_include_tests(cls, stream):
-        package_lists = []
-        if 'packages' in cls.j:
-            package_lists.append(('repository.json', cls.j))
+        for include in cls.j['includes']:
+            try:
+                with _open(include) as f:
+                    contents = f.read().decode('utf-8', 'strict')
+                data = json.loads(contents)
+            except Exception as e:
+                yield cls._fail("strict while reading %r" % include, e)
+                continue
 
-        if 'includes' in cls.j:
-            for include in cls.j['includes']:
-                try:
-                    with _open(include) as f:
-                        contents = f.read().decode('utf-8', 'strict')
-                    data = json.loads(contents)
-                except Exception as e:
-                    yield cls._fail("strict while reading %r" % include, e)
-                    continue
+            # `include` is for output during tests only
+            yield cls._test_indentation, (include, contents)
+            yield cls._test_repository_keys, (include, data)
+            yield cls._test_repository_package_names, (include, data)
 
-                # `include` is for output during tests only
-                yield cls._test_indentation, (include, contents)
-                yield cls._test_repository_keys, (include, data)
-                yield cls._test_repository_package_names, (include, data)
-                package_lists.append((include, data))
-                if 'dependencies' in data:
-                    yield cls._test_dependency_names, (include, data)
-
-        for package_list in package_lists:
-            include, data = package_list
             for package in data['packages']:
                 yield cls._test_package, (include, package)
 
@@ -817,6 +850,8 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
                              False))
 
             if 'dependencies' in data:
+                yield cls._test_dependency_names, (include, data)
+
                 for dependency in data['dependencies']:
                     yield cls._test_dependency, (include, dependency)
 
