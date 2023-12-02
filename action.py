@@ -700,12 +700,12 @@ class TestContainer(object):
     not userargs.channel or not os.path.isfile(userargs.channel),
     "No {} found".format(userargs.channel)
 )
-class DefaultChannelTests(TestContainer, unittest.TestCase):
+class ChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(DefaultChannelTests, cls).setUpClass()
+        super(ChannelTests, cls).setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -781,12 +781,12 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
     not userargs.repository or not os.path.isfile(userargs.repository),
     "No {} found".format(userargs.repository)
 )
-class DefaultRepositoryTests(TestContainer, unittest.TestCase):
+class RepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(DefaultRepositoryTests, cls).setUpClass()
+        super(RepositoryTests, cls).setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -862,8 +862,8 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
 def generate_default_test_methods(stream=None):
     if not stream:
         stream = sys.stdout
-    generate_test_methods(DefaultRepositoryTests, stream)
-    generate_test_methods(DefaultChannelTests, stream)
+    generate_test_methods(RepositoryTests, stream)
+    generate_test_methods(ChannelTests, stream)
 
 
 ################################################################################
