@@ -191,7 +191,7 @@ class TestContainer(object):
     pac_d_reg = ' '.join(map(str.strip, pac_d_reg.split()))
     package_details_regex = re.compile(pac_d_reg, re.X)
 
-    def _test_repository_keys(self, include, data):
+    def _test_repository_keys(self, filename, data):
         keys = ("$schema", 'schema_version', 'packages', 'dependencies', 'includes')
         self.assertTrue(2 <= len(data) <= len(keys), "Unexpected number of keys")
         self.assertIn('schema_version', data)
@@ -205,6 +205,12 @@ class TestContainer(object):
 
         for k in data:
             self.assertIn(k, keys, "Unexpected key")
+
+        includes = data.get('includes', [])
+        self.assertIsInstance(includes, list)
+
+        for include in includes:
+            self.assertIsInstance(include, str)
 
     def _test_dependency_names(self, include, data):
         m = re.search(r"(?:^|/)(0-9|[a-z]|dependencies)\.json$", include)
@@ -700,12 +706,12 @@ class TestContainer(object):
     not userargs.channel or not os.path.isfile(userargs.channel),
     "No {} found".format(userargs.channel)
 )
-class DefaultChannelTests(TestContainer, unittest.TestCase):
+class ChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(DefaultChannelTests, cls).setUpClass()
+        super(ChannelTests, cls).setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -781,12 +787,12 @@ class DefaultChannelTests(TestContainer, unittest.TestCase):
     not userargs.repository or not os.path.isfile(userargs.repository),
     "No {} found".format(userargs.repository)
 )
-class DefaultRepositoryTests(TestContainer, unittest.TestCase):
+class RepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(DefaultRepositoryTests, cls).setUpClass()
+        super(RepositoryTests, cls).setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -798,24 +804,14 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
                 cls.j = json.loads(cls.source)
 
     def test_repository_keys(self):
-        keys = sorted(self.j.keys())
-        self.assertEqual(keys, ['dependencies', 'includes', 'packages',
-                                'schema_version'])
-
-        self.assertEqual(self.j['schema_version'], '3.0.0')
-        self.assertEqual(self.j['packages'], [])
-        self.assertEqual(self.j['dependencies'], [])
-        self.assertIsInstance(self.j['includes'], list)
-
-        for include in self.j['includes']:
-            self.assertIsInstance(include, str)
+        self._test_repository_keys(userargs.repository, self.j)
 
     def test_indentation(self):
         return self._test_indentation(userargs.repository, self.source)
 
     @classmethod
     def generate_include_tests(cls, stream):
-        for include in cls.j['includes']:
+        for include in cls.j.get('includes', []):
             try:
                 with _open(include) as f:
                     contents = f.read().decode('utf-8', 'strict')
@@ -862,8 +858,8 @@ class DefaultRepositoryTests(TestContainer, unittest.TestCase):
 def generate_default_test_methods(stream=None):
     if not stream:
         stream = sys.stdout
-    generate_test_methods(DefaultRepositoryTests, stream)
-    generate_test_methods(DefaultChannelTests, stream)
+    generate_test_methods(RepositoryTests, stream)
+    generate_test_methods(ChannelTests, stream)
 
 
 ################################################################################
