@@ -26,7 +26,7 @@ import sys
 import unittest
 
 from functools import wraps
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 from urllib.parse import urljoin
 
@@ -606,7 +606,11 @@ class TestContainer(object):
             if re.match(r'https?://', path, re.I) is not None:
                 # Download the repository
                 try:
-                    with urlopen(path) as f:
+                    req = Request(
+                        url=path,
+                        headers={'User-Agent': 'Mozilla/5.0'}
+                    )
+                    with urlopen(req) as f:
                         source = f.read()
                 except Exception as e:
                     yield cls._fail("Downloading %s failed" % path, e)
