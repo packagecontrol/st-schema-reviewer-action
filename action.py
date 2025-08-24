@@ -30,6 +30,12 @@ from urllib.request import urlopen
 from urllib.error import HTTPError
 from urllib.parse import urljoin
 
+# known bad repositories that we'll just have to skip for now
+BAD_REPOS = [
+    'https://packages.monokai.pro/packages.json',
+    'https://raw.githubusercontent.com/blake-regalia/linked-data.syntaxes/master/channels/sublime/package-control.json'
+]
+
 generator_method_type = 'method'
 
 parser = argparse.ArgumentParser()
@@ -643,6 +649,10 @@ class TestContainer(object):
                 return
 
             success = True
+
+            if path in BAD_REPOS:
+                stream.write("skipping (known bad repo)")
+                return
 
             # Do not generate 1000 failing tests for not yet updated repos
             if schema != '3.0.0':
