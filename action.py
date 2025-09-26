@@ -112,7 +112,7 @@ def generate_test_methods(cls, stream):
                 mname = "test_" + mname
 
             # Include parameters in attribute name
-            name = "{}({})".format(mname, ", ".join(args))
+            name = f"{mname}({', '.join(args)})"
             setattr(cls, name, wrapper)
 
         # Remove the generator afterwards, it did its work
@@ -273,8 +273,8 @@ class TestContainer:
                 repo_dependency_names.append(name)
             if name in self.package_names:
                 self.fail(
-                    "Dependency and package names must be unique: %s, "
-                    "previously occured in %s" % (name, self.package_names[name])
+                    f"Dependency and package names must be unique: {name}, "
+                    f"previously occured in {self.package_names[name]})"
                 )
 
         # Check package order
@@ -296,11 +296,7 @@ class TestContainer:
         for pdata in data["packages"]:
             pname = get_package_name(pdata)
             if pname in self.package_names:
-                self.fail(
-                    "Package names must be unique: {}, previously occured in {}".format(
-                        pname, self.package_names[pname]
-                    )
-                )
+                self.fail(f"Package names must be unique: {pname}, previously occured in {self.package_names[pname]}")
             elif (
                 pname in self.previous_package_names
                 # check casing
@@ -308,19 +304,14 @@ class TestContainer:
             ):
                 print(pname, self.previous_package_names[pname][0])
                 self.fail(
-                    "Package names can not occur as a name and as a "
-                    "previous_name: %s, previously occured as "
-                    "previous_name in %s: %s"
-                    % (
-                        pname,
-                        self.previous_package_names[pname][1],
-                        self.previous_package_names[pname][2],
-                    )
+                    f"Package names can not occur as a name and as a previous_name: {pname},"
+                    " previously occured as previous_name in "
+                    f"{self.previous_package_names[pname][1]}: {self.previous_package_names[pname][2]}"
                 )
             elif pname in self.dependency_names:
                 self.fail(
-                    "Dependency and package names must be unique: %s, "
-                    "previously occured in %s" % (pname, self.dependency_names[pname])
+                    f"Dependency and package names must be unique: {pname}, "
+                    f"previously occured in {self.dependency_names[pname]}"
                 )
             else:
                 self.package_names[pname] = include
@@ -342,7 +333,7 @@ class TestContainer:
 
     def _test_indentation(self, filename, contents):
         for i, line in enumerate(contents.splitlines()):
-            self.assertRegex(line, r"^\t*\S", "Indent must be tabs in line %d" % (i + 1))
+            self.assertRegex(line, r"^\t*\S", f"Indent must be tabs in line {i + 1}")
 
     package_key_types_map = {
         "name": str,
@@ -394,14 +385,13 @@ class TestContainer:
                 for prev_name in v:
                     if prev_name in self.previous_package_names:
                         self.fail(
-                            "Previous package names must be unique: %s, "
-                            "previously occured in %s" % (prev_name, self.previous_package_names[prev_name])
+                            f"Previous package names must be unique: {prev_name}, "
+                            f"previously occured in {self.previous_package_names[prev_name]}"
                         )
                     elif prev_name in self.package_names:
                         self.fail(
-                            "Package names can not occur as a name and "
-                            "as a previous_name: %s, previously occured "
-                            "as name in %s" % (prev_name, self.package_names[prev_name])
+                            f"Package names can not occur as a name and as a previous_name: {prev_name}, "
+                            f"previously occured as name in {self.package_names[prev_name]}"
                         )
                     else:
                         self.previous_package_names[prev_name] = (
@@ -427,7 +417,7 @@ class TestContainer:
 
         if "details" not in data:
             for key in ("name", "homepage", "author", "releases"):
-                self.assertIn(key, data, '%r is required if no "details" URL provided' % key)
+                self.assertIn(key, data, f'{key!r} is required if no "details" URL provided')
 
     dependency_key_types_map = {
         "name": str,
@@ -454,7 +444,7 @@ class TestContainer:
             elif k == "load_order":
                 self.assertRegex(v, r"^\d\d$", '"load_order" must be a two digit string')
         for key in ("author", "releases", "issues", "description", "load_order"):
-            self.assertIn(key, data, "%r is required for dependencies" % key)
+            self.assertIn(key, data, f"{key!r} is required for dependencies")
 
     pck_release_key_types_map = {
         "base": str,
@@ -538,7 +528,7 @@ class TestContainer:
                 self.assertNotIn(
                     key,
                     data,
-                    'The key "%s" is redundant when "tags" or "branch" is specified' % key,
+                    f'The key "{key}" is redundant when "tags" or "branch" is specified',
                 )
 
         self.assertIn("sublime_text", data, "A sublime text version selector is required")
@@ -629,7 +619,7 @@ class TestContainer:
                 self.assertRegex(v, r"(?i)^[0-9a-f]{64}$")
 
     def enforce_key_types_map(self, k, v, key_types_map):
-        self.assertIn(k, key_types_map, 'Unknown key "%s"' % k)
+        self.assertIn(k, key_types_map, f'Unknown key "{k}"')
         self.assertIsInstance(v, key_types_map[k], k)
 
         if isinstance(v, list) and key_types_map[k] is not list and len(key_types_map[k]) == 2:
@@ -652,9 +642,9 @@ class TestContainer:
 
         if e:
             if isinstance(e, HTTPError):
-                self.fail("{}: {}".format(msg, e))
+                self.fail(f"{msg}: {e}")
             else:
-                self.fail("{}: {!r}".format(msg, e))
+                self.fail(f"{msg}: {e!r}")
         else:
             self.fail(msg)
 
@@ -676,7 +666,7 @@ class TestContainer:
             and .flush()
         """
         # TODO multi-threading
-        stream.write("%s ... " % path)
+        stream.write(f"{path} ... ")
         stream.flush()
 
         success = False
@@ -688,7 +678,7 @@ class TestContainer:
                     with urlopen(req) as f:
                         source = f.read()
                 except Exception as e:
-                    yield cls._fail("Downloading %s failed" % path, e)
+                    yield cls._fail(f"Downloading {path} failed", e)
                     return
                 source = source.decode("utf-8", "strict")
             else:
@@ -696,28 +686,28 @@ class TestContainer:
                     with _open(path) as f:
                         source = f.read().decode("utf-8", "strict")
                 except Exception as e:
-                    yield cls._fail("Opening %s failed" % path, e)
+                    yield cls._fail(f"Opening {path} failed", e)
                     return
 
             if not source:
-                yield cls._fail("%s is empty" % path)
+                yield cls._fail(f"{path} is empty")
                 return
 
             # Parse the repository
             try:
                 data = json.loads(source)
             except Exception as e:
-                yield cls._fail("Could not parse %s" % path, e)
+                yield cls._fail(f"Could not parse {path}", e)
                 return
 
             # Check for the schema version first (and generator failures it's
             # badly formatted)
             if "schema_version" not in data:
-                yield cls._fail("No schema_version found in %s" % path)
+                yield cls._fail(f"No schema_version found in {path}")
                 return
             schema = data["schema_version"]
             if schema != "3.0.0" and float(schema) not in (1.0, 1.1, 1.2, 2.0):
-                yield cls._fail("Unrecognized schema version {} in {}".format(schema, path))
+                yield cls._fail(f"Unrecognized schema version {schema} in {path}")
                 return
 
             success = True
@@ -728,7 +718,7 @@ class TestContainer:
 
             # Do not generate 1000 failing tests for not yet updated repos
             if schema != "3.0.0":
-                stream.write("skipping (schema version %s)" % data["schema_version"])
+                stream.write(f"skipping (schema version {data['schema_version']})")
                 cls.skipped_repositories[schema] += 1
                 return
             else:
@@ -753,7 +743,7 @@ class TestContainer:
                             yield (
                                 cls._test_release,
                                 (
-                                    "{} ({})".format(package_name, path),
+                                    f"{package_name} ({path})",
                                     release,
                                     False,
                                     False,
@@ -818,7 +808,7 @@ class ChannelTests(TestContainer, unittest.TestCase):
     def tearDownClass(cls):
         if cls.skipped_repositories:
             # TODO somehow pass stream here
-            print("Repositories skipped: %s" % dict(cls.skipped_repositories))
+            print(f"Repositories skipped: {dict(cls.skipped_repositories)}")
 
     def test_channel_keys(self):
         allowed_keys = ("$schema", "repositories", "schema_version")
@@ -868,7 +858,7 @@ class ChannelTests(TestContainer, unittest.TestCase):
             if repository.startswith("."):
                 continue
             if not repository.startswith("http"):
-                cls._fail("Unexpected repository url: %s" % repository)
+                cls._fail(f"Unexpected repository url: {repository}")
 
             yield from cls._include_tests(repository, stream)
 
@@ -910,7 +900,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
                     contents = f.read().decode("utf-8", "strict")
                 data = json.loads(contents)
             except Exception as e:
-                yield cls._fail("strict while reading %r" % include, e)
+                yield cls._fail(f"strict while reading {include!r}", e)
                 continue
 
             # `include` is for output during tests only
@@ -928,7 +918,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
                         (
                             yield (
                                 cls._test_release,
-                                ("{} ({})".format(package_name, include), release, False),
+                                (f"{package_name} ({include})", release, False),
                             )
                         )
 
@@ -946,7 +936,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
                                 yield (
                                     cls._test_release,
                                     (
-                                        "{} ({})".format(dependency_name, include),
+                                        f"{dependency_name} ({include})",
                                         release,
                                         True,
                                     ),
