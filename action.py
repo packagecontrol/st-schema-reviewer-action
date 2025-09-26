@@ -95,7 +95,7 @@ def generate_test_methods(cls, stream):
             def wrapper(self, method=method, params=params):
                 return method(self, *params)
 
-            # Do not attempt to print lists/dicts with printed lenght of 1000 or
+            # Do not attempt to print lists/dicts with printed length of 1000 or
             # more, they are not interesting for us (probably the whole file)
             args = []
             for v in params:
@@ -274,7 +274,7 @@ class TestContainer:
             if name in self.package_names:
                 self.fail(
                     f"Dependency and package names must be unique: {name}, "
-                    f"previously occured in {self.package_names[name]})"
+                    f"previously occurred in {self.package_names[name]})"
                 )
 
         # Check package order
@@ -292,11 +292,11 @@ class TestContainer:
 
         repo_package_names = []
         # Collect package names and check if they are unique,
-        # including occurences in previous_names.
+        # including occurrences in previous_names.
         for pdata in data["packages"]:
             pname = get_package_name(pdata)
             if pname in self.package_names:
-                self.fail(f"Package names must be unique: {pname}, previously occured in {self.package_names[pname]}")
+                self.fail(f"Package names must be unique: {pname}, previously occurred in {self.package_names[pname]}")
             elif (
                 pname in self.previous_package_names
                 # check casing
@@ -305,13 +305,13 @@ class TestContainer:
                 print(pname, self.previous_package_names[pname][0])
                 self.fail(
                     f"Package names can not occur as a name and as a previous_name: {pname},"
-                    " previously occured as previous_name in "
+                    " previously occurred as previous_name in "
                     f"{self.previous_package_names[pname][1]}: {self.previous_package_names[pname][2]}"
                 )
             elif pname in self.dependency_names:
                 self.fail(
                     f"Dependency and package names must be unique: {pname}, "
-                    f"previously occured in {self.dependency_names[pname]}"
+                    f"previously occurred in {self.dependency_names[pname]}"
                 )
             else:
                 self.package_names[pname] = include
@@ -386,12 +386,12 @@ class TestContainer:
                     if prev_name in self.previous_package_names:
                         self.fail(
                             f"Previous package names must be unique: {prev_name}, "
-                            f"previously occured in {self.previous_package_names[prev_name]}"
+                            f"previously occurred in {self.previous_package_names[prev_name]}"
                         )
                     elif prev_name in self.package_names:
                         self.fail(
                             f"Package names can not occur as a name and as a previous_name: {prev_name}, "
-                            f"previously occured as name in {self.package_names[prev_name]}"
+                            f"previously occurred as name in {self.package_names[prev_name]}"
                         )
                     else:
                         self.previous_package_names[prev_name] = (
@@ -759,7 +759,7 @@ class TestContainer:
     def _fail(cls, *args):
         """
         Generates a (method, args) tuple that returns an error when called.
-        Allows for defering an error until the tests are actually run.
+        Allows for deferring an error until the tests are actually run.
         """
 
         return cls._test_error, args
@@ -767,7 +767,7 @@ class TestContainer:
     @classmethod
     def _write(cls, stream, string):
         """
-        Writes dianostic output to a file-like object.
+        Writes diagnostic output to a file-like object.
 
         :param stream:
             Must have the methods .write() and .flush()
