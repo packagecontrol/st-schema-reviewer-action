@@ -112,7 +112,7 @@ def generate_test_methods(cls, stream):
                 mname = "test_" + mname
 
             # Include parameters in attribute name
-            name = "%s(%s)" % (mname, ", ".join(args))
+            name = "{}({})".format(mname, ", ".join(args))
             setattr(cls, name, wrapper)
 
         # Remove the generator afterwards, it did its work
@@ -128,13 +128,13 @@ class CaseInsensitiveDict(dict):
         return key.lower() if isinstance(key, str) else key
 
     def __getitem__(self, key):
-        return super(CaseInsensitiveDict, self).__getitem__(self._k(key))
+        return super().__getitem__(self._k(key))
 
     def __setitem__(self, key, value):
-        super(CaseInsensitiveDict, self).__setitem__(self._k(key), value)
+        super().__setitem__(self._k(key), value)
 
     def __contains__(self, key):
-        return super(CaseInsensitiveDict, self).__contains__(self._k(key))
+        return super().__contains__(self._k(key))
 
 
 def get_package_name(data):
@@ -150,7 +150,7 @@ def get_package_name(data):
 # Tests
 
 
-class TestContainer(object):
+class TestContainer:
     """Contains tests that the generators can easily access (when subclassing).
 
     Does not contain tests itself, must be used as mixin with unittest.TestCase.
@@ -297,7 +297,9 @@ class TestContainer(object):
             pname = get_package_name(pdata)
             if pname in self.package_names:
                 self.fail(
-                    "Package names must be unique: %s, previously occured in %s" % (pname, self.package_names[pname])
+                    "Package names must be unique: {}, previously occured in {}".format(
+                        pname, self.package_names[pname]
+                    )
                 )
             elif (
                 pname in self.previous_package_names
@@ -605,7 +607,7 @@ class TestContainer(object):
                     self.fail("Specifying all of x32, x64 and arm64 architectures is redundant")
 
                 self.assertFalse(
-                    set(["osx", "windows", "linux"]) == set(v),
+                    {"osx", "windows", "linux"} == set(v),
                     '"osx, windows, linux" are similar to (and should be replaced by) "*"',
                 )
 
@@ -650,9 +652,9 @@ class TestContainer(object):
 
         if e:
             if isinstance(e, HTTPError):
-                self.fail("%s: %s" % (msg, e))
+                self.fail("{}: {}".format(msg, e))
             else:
-                self.fail("%s: %r" % (msg, e))
+                self.fail("{}: {!r}".format(msg, e))
         else:
             self.fail(msg)
 
@@ -715,7 +717,7 @@ class TestContainer(object):
                 return
             schema = data["schema_version"]
             if schema != "3.0.0" and float(schema) not in (1.0, 1.1, 1.2, 2.0):
-                yield cls._fail("Unrecognized schema version %s in %s" % (schema, path))
+                yield cls._fail("Unrecognized schema version {} in {}".format(schema, path))
                 return
 
             success = True
@@ -751,7 +753,7 @@ class TestContainer(object):
                             yield (
                                 cls._test_release,
                                 (
-                                    "%s (%s)" % (package_name, path),
+                                    "{} ({})".format(package_name, path),
                                     release,
                                     False,
                                     False,
@@ -761,8 +763,7 @@ class TestContainer(object):
         if "includes" in data:
             for include in data["includes"]:
                 i_url = urljoin(path, include)
-                for test in cls._include_tests(i_url, stream):
-                    yield test
+                yield from cls._include_tests(i_url, stream)
 
     @classmethod
     def _fail(cls, *args):
@@ -791,14 +792,14 @@ class TestContainer(object):
 
 @unittest.skipIf(
     not userargs.channel or not os.path.isfile(userargs.channel),
-    "No {} found".format(userargs.channel),
+    f"No {userargs.channel} found",
 )
 class ChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(ChannelTests, cls).setUpClass()
+        super().setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -869,8 +870,7 @@ class ChannelTests(TestContainer, unittest.TestCase):
             if not repository.startswith("http"):
                 cls._fail("Unexpected repository url: %s" % repository)
 
-            for test in cls._include_tests(repository, stream):
-                yield test
+            yield from cls._include_tests(repository, stream)
 
         stream.write("\n")
         stream.flush()
@@ -878,14 +878,14 @@ class ChannelTests(TestContainer, unittest.TestCase):
 
 @unittest.skipIf(
     not userargs.repository or not os.path.isfile(userargs.repository),
-    "No {} found".format(userargs.repository),
+    f"No {userargs.repository} found",
 )
 class RepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        super(RepositoryTests, cls).setUpClass()
+        super().setUpClass()
         cls.pre_generate()
 
     # We need cls.j this for generating tests
@@ -928,7 +928,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
                         (
                             yield (
                                 cls._test_release,
-                                ("%s (%s)" % (package_name, include), release, False),
+                                ("{} ({})".format(package_name, include), release, False),
                             )
                         )
 
@@ -946,7 +946,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
                                 yield (
                                     cls._test_release,
                                     (
-                                        "%s (%s)" % (dependency_name, include),
+                                        "{} ({})".format(dependency_name, include),
                                         release,
                                         True,
                                     ),
