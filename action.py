@@ -41,7 +41,7 @@ generator_method_type = "method"
 parser = argparse.ArgumentParser()
 parser.add_argument("--channel", default="channel.json")
 parser.add_argument("--repository", default="repository.json")
-parser.add_argument("--test-repositories", action="store_true")
+parser.add_argument("--test-repositories", action="store_true", default=False)
 userargs, unittesting_args = parser.parse_known_args()
 sys.argv = sys.argv[:1] + unittesting_args
 
