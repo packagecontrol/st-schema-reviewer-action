@@ -661,7 +661,6 @@ class TestContainer:
             A file-like object used for diagnostic output that provides .write()
             and .flush()
         """
-        # TODO multi-threading
         stream.write(f"{path} ... ")
         stream.flush()
 
