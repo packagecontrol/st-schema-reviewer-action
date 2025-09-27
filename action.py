@@ -2,10 +2,6 @@
 
 """Tests for the validity of the channel and repository files.
 
-You can run this script directly or with `python -m unittest` from this or the
-root directory. For some reason `nosetests` does not pick up the generated tests
-even though they are generated at load time.
-
 Arguments:
     --channel=channel.json
         Channel filename to test
@@ -57,7 +53,7 @@ def _open(filepath, *args, **kwargs):
     return open(filepath, "rb", *args, **kwargs)
 
 
-def generate_test_methods(cls, stream):
+def generate_test_methods(cls, stream=sys.stdout):
     """Class decorator for classes that use test generating methods.
 
     A class that is decorated with this function will be searched for methods
@@ -115,7 +111,7 @@ def generate_test_methods(cls, stream):
             name = f"{mname}({', '.join(args)})"
             setattr(cls, name, wrapper)
 
-        # Remove the generator afterwards, it did its work
+        # Remove the generator afterwards. It did its work.
         delattr(cls, name)
 
     return cls
@@ -784,6 +780,7 @@ class TestContainer:
     not userargs.channel or not os.path.isfile(userargs.channel),
     f"No {userargs.channel} found",
 )
+@generate_test_methods
 class ChannelTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
@@ -792,7 +789,7 @@ class ChannelTests(TestContainer, unittest.TestCase):
         super().setUpClass()
         cls.pre_generate()
 
-    # We need cls.j this for generating tests
+    # We load the JSON data into `cls.j` before generating tests.
     @classmethod
     def pre_generate(cls):
         if not hasattr(cls, "j") and os.path.isfile(userargs.channel):
@@ -870,6 +867,7 @@ class ChannelTests(TestContainer, unittest.TestCase):
     not userargs.repository or not os.path.isfile(userargs.repository),
     f"No {userargs.repository} found",
 )
+@generate_test_methods
 class RepositoryTests(TestContainer, unittest.TestCase):
     maxDiff = None
 
@@ -878,7 +876,7 @@ class RepositoryTests(TestContainer, unittest.TestCase):
         super().setUpClass()
         cls.pre_generate()
 
-    # We need cls.j this for generating tests
+    # We load the JSON data into `cls.j` before generating tests.
     @classmethod
     def pre_generate(cls):
         if not hasattr(cls, "j"):
@@ -946,22 +944,9 @@ class RepositoryTests(TestContainer, unittest.TestCase):
         yield cls._fail("This won't be executed for some reason")
 
 
-def generate_default_test_methods(stream=None):
-    if not stream:
-        stream = sys.stdout
-    generate_test_methods(RepositoryTests, stream)
-    generate_test_methods(ChannelTests, stream)
-
-
 ################################################################################
 # Main
 
-
-# When included to a Sublime package, sys.argv will not be set. We need to
-# generate the test methods differently in that context, so we only generate
-# them if sys.argv exists.
-if hasattr(sys, "argv"):
-    generate_default_test_methods()
 
 if __name__ == "__main__":
     unittest.main()
