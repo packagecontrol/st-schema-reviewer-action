@@ -28,7 +28,6 @@ from urllib.parse import urljoin
 
 # known bad repositories that we'll just have to skip for now
 BAD_REPOS = [
-    "https://packages.monokai.pro/packages.json",
     "https://raw.githubusercontent.com/blake-regalia/linked-data.syntaxes/master/channels/sublime/package-control.json",
 ]
 
