@@ -605,7 +605,7 @@ class TestContainer:
                 if isinstance(v, str):
                     self.assertFalse(
                         v == "true",
-                        'It is unlikely to specify the prefix "true" use not the boolean `true`',
+                        '"true" is an unlikely prefix. You probably want the boolean `true` instead.',
                     )
 
             elif k == "branch":
