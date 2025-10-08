@@ -207,6 +207,7 @@ class TestContainer:
         "ShellScript",
         "SQL",
         "TCL",
+        "TOML",
         "Text",
         "Textile",
         "Theme - Default",
