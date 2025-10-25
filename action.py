@@ -217,6 +217,7 @@ class TestContainer:
     )
 
     rel_b_reg = r"""^ ( https:// bitbucket\.org / [^/#?]+ / [^/#?]+
+                      | https:// codeberg\.org / [^/#?]+ / [^/#?]+
                       | https:// github\.com / [^/#?]+ / [^/#?]+
                       | https:// gitlab\.com / [^/#?]+ / [^/#?]+
                       ) $"""
@@ -225,6 +226,8 @@ class TestContainer:
     release_base_regex = re.compile(rel_b_reg, re.X)
 
     pac_d_reg = r"""^ ( https:// bitbucket\.org/ [^/#?]+/ [^/#?]+
+                        ( /src/ [^#?]*[^/#?] | \#tags | / )?
+                      | https:// codeberg\.org/ [^/#?]+/ [^/#?]+
                         ( /src/ [^#?]*[^/#?] | \#tags | / )?
                       | https:// github\.com/ [^/#?]+/ [^/#?]+
                         (?<!\.git) ( /tree/ [^#?]*[^/#?] | / )?
