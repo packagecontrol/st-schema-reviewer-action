@@ -654,15 +654,35 @@ class TestContainer:
                     )
 
                 case "sublime_text":
+                    self.assertNotEqual(value, "*", 'Optional "sublime_text": "*" can be removed.')
                     self.assertRegex(
                         value,
                         r"^(\*|<=?\d{4}|>=?\d{4}|\d{4} - \d{4})$",
-                        "sublime_text must be `*`, of the form "
-                        "`<relation><version>` "
-                        "where <relation> is one of {<, <=, >, >=} "
-                        "and <version> is a 4 digit number, "
+                        "sublime_text must be `*`, of the form `<relation><version>` where <relation> "
+                        "is one of {<, <=, >, >=} and <version> is a 4 digit number, "
                         "or of the form `<version> - <version>`",
                     )
+
+                    match = re.match(r"^([<>=]{1,2})(\d+)$", value)
+                    if match:
+                        op = match.group(1)
+                        ver = int(match.group(2))
+                        match op:
+                            case "<=":
+                                self.assertGreater(ver, 3142, "Release incompatible with ST3143+.")
+                            case "<":
+                                self.assertGreater(ver, 3143, "Release incompatible with ST3143+.")
+                            case ">=":
+                                self.assertGreater(ver, 3143, "Obsolete sublime_text specifier. Should be removed.")
+                            case ">":
+                                self.assertGreater(ver, 3142, "Obsolete sublime_text specifier. Should be removed.")
+
+                    match = re.match(r"^(\d+) - (\d+)$", value)
+                    if match:
+                        ver2 = int(match.group(2))
+                        self.assertGreater(ver2, 3142, "Release incompatible with ST3143+.")
+                        ver1 = int(match.group(1))
+                        self.assertGreater(ver1, 3142, f"Considder changing specifier to <={ver2}.")
 
                 case "platforms":
                     if isinstance(value, str):
