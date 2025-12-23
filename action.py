@@ -582,7 +582,7 @@ class TestContainer:
             self.assertIn(key, data, f"{key!r} is required")
 
         # Test keys values
-        self._check_release_key_values(data, True)
+        self._check_release_key_values(data, self.lib_release_key_types_map)
 
     def _test_package_release(self, package_name, data, only_templates=True):
         if only_templates:
@@ -628,23 +628,15 @@ class TestContainer:
         )
 
         # Test keys values
-        self._check_release_key_values(data, False)
+        self._check_release_key_values(data, self.pkg_release_key_types_map)
 
-    def _check_release_key_values(self, data, library):
+    def _check_release_key_values(self, data, release_key_types_map):
         """Check the key-value pairs of a release for validity."""
-        release_key_types_map = self.lib_release_key_types_map if library else self.pkg_release_key_types_map
         for key, value in data.items():
             self._check_key_value_types(key, value, release_key_types_map)
-
             match key:
                 case "url":
-                    if library:
-                        if "sha256" not in data:
-                            self.assertRegex(value, r"^https://")
-                        else:
-                            self.assertRegex(value, r"^http://")
-                    else:
-                        self.assertRegex(value, r"^https?://")
+                    self.assertRegex(value, r"^https://", "url must use file:// or https:// protocol.")
 
                 case "base":
                     self.assertRegex(
