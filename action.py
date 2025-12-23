@@ -655,7 +655,7 @@ class TestContainer:
                         "or of the form `<version> - <version>`",
                     )
 
-                    match = re.match(r"^([<>=]{1,2})(\d+)$", value)
+                    match = re.match(r"^([<>]=?)(\d{4})$", value)
                     if match:
                         op = match.group(1)
                         ver = int(match.group(2))
@@ -669,7 +669,7 @@ class TestContainer:
                             case ">":
                                 self.assertGreater(ver, 3142, "Obsolete sublime_text specifier. Should be removed.")
 
-                    match = re.match(r"^(\d+) - (\d+)$", value)
+                    match = re.match(r"^(\d{4}) - (\d{4})$", value)
                     if match:
                         ver2 = int(match.group(2))
                         self.assertGreater(ver2, 3142, "Release incompatible with ST3143+.")
