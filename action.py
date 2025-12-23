@@ -687,6 +687,9 @@ class TestContainer:
                 case "platforms":
                     if isinstance(value, str):
                         value = [value]
+
+                    self.assertNotEqual(value, ["*"], 'Optional "platforms": ["*"] can be removed.')
+
                     for plat in value:
                         self.assertRegex(plat, r"^(\*|(osx|linux|windows)(-(x(32|64)|arm64))?)$")
 
