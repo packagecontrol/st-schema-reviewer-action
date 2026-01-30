@@ -705,7 +705,7 @@ class TestContainer:
                     )
 
                 case "python_versions":
-                    python_versions = ("3.3", "3.8", "3.13")
+                    python_versions = ("3.3", "3.8", "3.13", "3.14")
                     for pyver in value:
                         self.assertIn(pyver, python_versions, f"Unsupported value {pyver} in {key}!")
 
