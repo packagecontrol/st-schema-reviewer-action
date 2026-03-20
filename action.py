@@ -29,6 +29,7 @@ from urllib.parse import urljoin
 # known bad repositories that we'll just have to skip for now
 BAD_REPOS = [
     "https://raw.githubusercontent.com/blake-regalia/linked-data.syntaxes/master/channels/sublime/package-control.json",
+    "https://codexns.io/packages/packages.json"
 ]
 
 generator_method_type = "method"
