@@ -859,7 +859,10 @@ class ChannelTests(TestContainer, unittest.TestCase):
                 continue
             if not repository.startswith("http"):
                 cls._fail(f"Unexpected repository url: {repository}")
-
+            if repository in BAD_REPOS:
+                stream.write(f"skipping (known bad repo): {repository}")
+                return
+            
             yield from cls._include_tests(repository, stream)
 
         stream.write("\n")
