@@ -441,7 +441,9 @@ class TestContainer:
                 self.assertTrue(package_name[0].isdigit(), "Package inserted in wrong file")
         elif len(fname) == 1:
             for package_name in repo_package_names:
-                self.assertEqual(package_name[0].lower(), fname[0].lower(), "Package inserted in wrong file")
+                # skip leading non-alphanumeric characters
+                c = next(c for c in package_name if c.isalpha() or c.isdigit())
+                self.assertEqual(c.lower(), fname[0].lower(), "Package inserted in wrong file")
 
         # Check package order
         self.assertEqual(
